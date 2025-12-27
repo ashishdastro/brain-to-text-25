@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+
+# IDE
+.vscode/
+.idea/
+
+# Build
+dist/
+build/
+*.egg-info/
+
+# Data (DO NOT COMMIT)
+data/raw/
+data/processed/
+experiments/
+submission.csv
+
+# Checkpoints
+*.pth
+*.pt
+checkpoint/
