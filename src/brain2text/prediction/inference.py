@@ -1,7 +1,7 @@
 import torch
 import yaml
 from brain2text.models.rnn import RecurrentModel
-from brain2text.utils.decoding import greedy_decoder
+from brain2text.utils.decoding import beam_search_decode_ctc
 
 CHECKPOINT_DIR = "data/raw/t15_pretrained_rnn_baseline/t15_pretrained_rnn_baseline/checkpoint"
 ARGS_PATH = f"{CHECKPOINT_DIR}/args.yaml"
@@ -31,7 +31,22 @@ def load_pretrained_model(device="cpu"):
     return model
 
 def predict_single_trial(model, x, token_map, device="cpu"):
-    x = x.unsqueeze(0).to(device)   # [1, T, F]
+    """
+    x: torch.Tensor [T, F]
+    token_map: list (index -> symbol)
+    """
+    x = x.unsqueeze(0).to(device)        # [1, T, F]
+    lengths = [x.shape[1]]               # <-- define T from input
+
     with torch.no_grad():
-        logits = model(x)[0]        # [T, 41]
-    return greedy_decoder(logits, token_map)
+        logits = model(x)           # [1, T, V]
+
+    pred = beam_search_decode_ctc(
+        logits,
+        lengths,
+        token_map,
+        beam_width=2,
+        blank_id=0
+    )[0]
+
+    return pred
