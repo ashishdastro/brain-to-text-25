@@ -1,121 +1,156 @@
-## 🧠 Project Overview — Brain-to-Text ’25 (Kaggle)
+# 🧠 Brain-to-Text ’25 — Kaggle Competition
 
-This project is built for the **Brain-to-Text ’25 Kaggle competition**.
-The goal is to decode **human speech directly from brain activity**.
+Decode **speech directly from human brain activity**.
 
-Participants are given recordings from electrodes placed on the surface of the brain (ECoG).
-While the participant silently *thinks* of words or phonemes, the neural signals are recorded.
+This repository contains a clean, reproducible pipeline for the  
+**Brain-to-Text ’25 Kaggle challenge**, including:
 
-The task:
+- data loading  
+- pretrained baseline model  
+- CTC decoding (now with **beam search**)  
+- submission generation (`submission.csv`)
 
-> **Predict the sequence of phonemes (basic sound units of speech) for each brain recording.**
+Leaderboard results: our baseline jumped from **125.5 → 1.00 PER** after better decoding.
 
-Phonemes are not full words — they are building blocks of spoken language.
-Examples:
+---
+
+## 🧩 Problem Overview
+
+The dataset comes from ECoG recordings (electrodes placed on the brain surface).  
+Participants silently imagine speech — the model must predict the sequence of **phonemes**.
+
+> **Goal:**  
+> Convert neural activity → ordered phoneme sequence.
+
+Phonemes are sound building blocks:
 
 | Word  | Phoneme sequence |
-| ----- | ---------------- |
-| cat   | K AE T           |
-| dog   | D AO G           |
-| hello | HH AH L OW       |
+|------|------------------|
+| cat  | K AE T           |
+| dog  | D AO G           |
+| hello | HH AH L OW      |
 
-The competition evaluates submissions using **Phoneme Error Rate (PER)** — similar to Word Error Rate used in speech recognition.
+Evaluation metric:
 
----
+### 📉 Phoneme Error Rate (PER)
 
-## 🎯 Why This Problem Matters
-
-This research direction is important for:
-
-* **medical neuro-prosthetics**
-  Helping locked-in or paralyzed patients communicate again.
-
-* **speech replacement devices**
-  Instead of tracking muscle movement, decode *intended speech*.
-
-* **neuroscience research**
-  Understanding how language is represented in the brain.
-
-This project demonstrates a full pipeline from neural data to readable phoneme predictions.
+(lower is better — like Word Error Rate in ASR).
 
 ---
 
-## 📂 What Data Looks Like
+## 🧪 Data Format
 
-The data is stored in `HDF5` files. Each recording contains:
+Training and test data are stored in **HDF5** files.
 
-* `input_features` — neural signals over time (shape ~ `[time_steps, 512]`)
-* labels (for training data only) — phoneme indices
-
-Example structure:
+Each trial contains:
 
 ```
-trial_0000/
-    input_features   →   [T, 512]
-    seq_class_ids    →   [L]
-```
 
-For test data, labels are not provided.
+trial_xxxx/
+input_features     # [time_steps, 512]
+seq_class_ids      # phoneme labels (train only)
 
----
+````
 
-## 🤖 Model Approach (Baseline)
-
-This repo currently implements the **official competition baseline**:
-
-1️⃣ **Neural features (512-dim vectors per timestep)**
-2️⃣ Adapter layer reduces dimensionality → 256
-3️⃣ **RNN (GRU)** processes temporal sequence
-4️⃣ Output layer predicts **41 phoneme classes**
-5️⃣ **CTC decoding** converts predictions into readable phoneme strings
-
-CTC (Connectionist Temporal Classification) is commonly used for:
-
-* speech recognition
-* handwriting recognition
-* any sequence where alignment isn't known
-
-It lets the model output variable-length phoneme sequences from a fixed input length.
+Test data does **not** include labels.
 
 ---
 
-## 📈 What This Repository Contains
+## 🤖 Model (Baseline)
 
-This repository provides:
+This repo implements the official baseline model:
 
-✔ professional project structure
-✔ data loaders for HDF5 files
-✔ pretrained baseline model loader
-✔ greedy CTC decoder
-✔ inference pipeline → generates `submission.csv`
+1️⃣ 512-dim neural features per timestep  
+2️⃣ Adapter projects features → 256  
+3️⃣ GRU / RNN encodes the time sequence  
+4️⃣ Output layer predicts **41 phoneme classes**  
+5️⃣ **CTC (Connectionist Temporal Classification)** handles alignment
 
-The current workflow:
+CTC lets the network output variable-length phoneme sequences without knowing exact timing.
+
+---
+
+## 🔓 Decoding (Important!)
+
+Originally the baseline used **greedy decoding**.  
+We upgraded to:
+
+### ⭐ CTC Prefix Beam Search (beam width = 10)
+
+Benefits:
+
+- considers multiple candidate sequences
+- handles repeated symbols + blanks correctly
+- dramatically improved leaderboard score
+
+Beam width is configurable.
+
+---
+
+## 🚀 Usage
+
+Install the project:
 
 ```bash
 pip install -e .
+````
+
+Run inference:
+
+```bash
 python scripts/run_inference.py
 ```
 
-This produces a leaderboard-ready file:
+This produces:
 
 ```
-id,text
-t15.2023.08.13_trial_0000,HH AH L OW |
-...
+submission.csv
 ```
 
-Upload to Kaggle → get baseline score.
+### ⚠️ Note on Kaggle IDs
+
+Kaggle expects **numeric IDs (0…N-1)** — the script ensures the correct format.
 
 ---
 
-## 🚀 Roadmap (What We’ll Improve Next)
+## 📁 Project Structure (Medium-style)
 
-This project serves as a foundation to build better systems:
+```
+ml_project/
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   └── external/
+├── notebooks/
+├── src/
+│   └── brain2text/
+│       ├── data/
+│       ├── models/
+│       ├── training/
+│       ├── utils/
+│       └── prediction/
+├── scripts/
+├── tests/
+└── README.md
+```
 
-* fine-tune neural model
-* add augmentations
-* add beam-search / language-model decoding
-* evaluate on validation sessions
-* visualize activations / interpret brain patterns
+---
 
-Everything starts with a working baseline — which this repo now has.
+## 📈 Roadmap
+
+This repository is a starting point — upcoming improvements:
+
+* ✔ beam-search decoding
+* 🔜 language-model assisted decoding
+* 🔜 model training + tuning
+* 🔜 validation and PER tracking
+* 🔜 signal preprocessing experiments (power, STFT, etc.)
+
+Contributions welcome — this project is intentionally structured for iteration.
+
+---
+
+## 🙌 Acknowledgements
+
+Kaggle organizers and the research teams making open BCI datasets available —
+this competition pushes the boundary of non-invasive communication technologies.
